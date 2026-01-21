@@ -32,9 +32,18 @@ export class JobsRepository extends FirestoreRepository<Job> {
     );
 
     // 1. Keyword Search
-    if (search) {
-      query = query.where('keywords', 'array-contains', search.toLowerCase());
+      if (search) {
+    const keywords = search.toLowerCase().split(' ').filter(k => k.length > 0);
+    
+    if (keywords.length === 1) {
+      // Single keyword
+      query = query.where('keywords', 'array-contains', keywords[0]);
+    } else if (keywords.length > 1) {
+      // Multiple keywords (max 10)
+      query = query.where('keywords', 'array-contains-any', keywords.slice(0, 10));
     }
+  }
+
 
     // 2. Exact Filters
     if (location) query = query.where('location', '==', location);

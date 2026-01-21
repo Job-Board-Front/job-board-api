@@ -85,7 +85,8 @@ export abstract class FirestoreRepository<T extends { id?: string }> {
 
     const result: any = { id: doc.id };
 
-    for (const [key, value] of Object.entries(data)) {
+    for (const [key, value] of Object.entries(data as Record<string, any>)) {
+ 
       if (value instanceof Timestamp) {
         result[key] = value.toDate();
       } else {
