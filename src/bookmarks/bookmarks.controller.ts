@@ -15,6 +15,8 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
 @Controller('bookmarks')
+@UseGuards(FirebaseAuthGuard, RolesGuard)
+@Roles(Role.USER)
 export class BookmarksController {
   constructor(private readonly bookmarksService: BookmarksService) {}
 
@@ -35,8 +37,6 @@ export class BookmarksController {
   }
 
   @Get()
-  @UseGuards(FirebaseAuthGuard, RolesGuard)
-  @Roles(Role.USER)
   async findAll(@CurrentUser() user: userPayloadInterface.UserPayload) {
     return this.bookmarksService.getUserBookmarks(user.uid);
   }

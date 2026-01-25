@@ -24,21 +24,21 @@ const modernTechLogos = [
   'https://img.icons8.com/color/96/000000/data-configuration.png', // Data
   'https://img.icons8.com/color/96/000000/artificial-intelligence.png', // IA
   'https://img.icons8.com/color/96/000000/blockchain-technology.png', // Blockchain
-  
+
   // Logos d'applications/plateformes
   'https://img.icons8.com/color/96/000000/web-design.png', // Web design
   'https://img.icons8.com/color/96/000000/mobile-app.png', // Mobile
   'https://img.icons8.com/color/96/000000/api.png', // API
   'https://img.icons8.com/color/96/000000/database.png', // Database
   'https://img.icons8.com/color/96/000000/server.png', // Server
-  
+
   // Logos abstraits modernes
   'https://img.icons8.com/color/96/000000/hexagon.png', // Hexagone
   'https://img.icons8.com/color/96/000000/circle.png', // Cercle coloré
   'https://img.icons8.com/color/96/000000/diamond.png', // Diamant
   'https://img.icons8.com/color/96/000000/triangle.png', // Triangle
   'https://img.icons8.com/color/96/000000/star.png', // Étoile
-  
+
   // Émoticônes colorées professionnelles
   'https://img.icons8.com/color/96/000000/rocket.png', // Fusée
   'https://img.icons8.com/color/96/000000/lightbulb.png', // Ampoule
@@ -47,7 +47,6 @@ const modernTechLogos = [
   'https://img.icons8.com/color/96/000000/innovation.png', // Innovation
 ];
 
-
 const LOGOS_LIST = modernTechLogos;
 
 // Fonction pour obtenir un logo aléatoire
@@ -55,7 +54,6 @@ const getRandomLogo = () => {
   const randomIndex = Math.floor(Math.random() * LOGOS_LIST.length);
   return LOGOS_LIST[randomIndex];
 };
-
 
 async function addLogoToJobs() {
   console.log('🚀 Adding modern colored logos to existing jobs...');
@@ -81,10 +79,9 @@ async function addLogoToJobs() {
     snapshot.forEach((doc) => {
       const docRef = db.collection('jobs').doc(doc.id);
       const jobData = doc.data();
-      
-      
+
       const logoUrl = getRandomLogo();
-      
+
       batch.update(docRef, { logoUrl });
       updatedCount++;
       batchCount++;
@@ -103,12 +100,14 @@ async function addLogoToJobs() {
 
     console.log(`\n✅ Successfully updated ${updatedCount} jobs!`);
     console.log('\n📊 Logos assignés par catégorie (exemple):');
-    
+
     // Exemple de statistiques
     const sampleJobs = snapshot.docs.slice(0, 10);
     sampleJobs.forEach((doc, i) => {
       const job = doc.data();
-      console.log(`  ${i + 1}. ${job.title || 'Sans titre'}: ${job.logoUrl?.split('/').pop() || 'Logo'}`);
+      console.log(
+        `  ${i + 1}. ${job.title || 'Sans titre'}: ${job.logoUrl?.split('/').pop() || 'Logo'}`,
+      );
     });
 
     process.exit(0);
@@ -117,7 +116,6 @@ async function addLogoToJobs() {
     process.exit(1);
   }
 }
-
 
 addLogoToJobs().catch((err) => {
   console.error('Update failed', err);
