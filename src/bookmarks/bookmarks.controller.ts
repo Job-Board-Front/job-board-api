@@ -6,18 +6,21 @@ import {
   Param,
   UseGuards,
 } from '@nestjs/common';
-import * as currentUserDecorator from 'src/common/decorators/current-user.decorator';
 import { FirebaseAuthGuard } from 'src/common/guards/auth.guard';
 import { BookmarksService } from './bookmarks.service';
+import { RolesGuard } from 'src/auth/roles/guard/roles.guard';
+import * as userPayloadInterface from 'src/auth/interfaces/user-payload.interface';
+import { Role } from 'src/auth/roles/roles.enum';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
 @Controller('bookmarks')
-@UseGuards(FirebaseAuthGuard)
 export class BookmarksController {
   constructor(private readonly bookmarksService: BookmarksService) {}
 
   @Post(':jobId')
   async create(
-    @currentUserDecorator.CurrentUser() user: currentUserDecorator.UserPayload,
+    @CurrentUser() user: userPayloadInterface.UserPayload,
     @Param('jobId') jobId: string,
   ) {
     return this.bookmarksService.addBookmark(user.uid, jobId);
@@ -25,16 +28,16 @@ export class BookmarksController {
 
   @Delete(':jobId')
   async remove(
-    @currentUserDecorator.CurrentUser() user: currentUserDecorator.UserPayload,
+    @CurrentUser() user: userPayloadInterface.UserPayload,
     @Param('jobId') jobId: string,
   ) {
     return this.bookmarksService.removeBookmark(user.uid, jobId);
   }
 
   @Get()
-  async findAll(
-    @currentUserDecorator.CurrentUser() user: currentUserDecorator.UserPayload,
-  ) {
+  @UseGuards(FirebaseAuthGuard, RolesGuard)
+  @Roles(Role.USER)
+  async findAll(@CurrentUser() user: userPayloadInterface.UserPayload) {
     return this.bookmarksService.getUserBookmarks(user.uid);
   }
 }
