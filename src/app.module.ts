@@ -4,6 +4,7 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { AuthModule } from './auth/auth.module';
 import { JobsModule } from './jobs/jobs.module';
 import { BookmarksModule } from './bookmarks/bookmarks.module';
+import { FiltersModule } from './filters/filters.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { BookmarksModule } from './bookmarks/bookmarks.module';
     AuthModule,
     JobsModule,
     BookmarksModule,
+    FiltersModule,
   ],
 })
 export class AppModule {}
