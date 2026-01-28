@@ -41,6 +41,12 @@ export class JobsController {
     return this.jobsService.findAll(query);
   }
 
+  @Get('bulk')
+  async findMany(@Query('ids') ids: string) {
+    const jobIds = ids.split(',').map((id) => id.trim());
+    return this.jobsService.findManyByIds(jobIds);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.jobsService.findOne(id);
@@ -52,13 +58,10 @@ export class JobsController {
     await this.jobsService.remove(id);
     return { message: 'Job deleted successfully' };
   }
-  
+
   @Put(':id')
   @UseGuards(FirebaseAuthGuard)
-  async update(
-    @Param('id') id: string,
-    @Body() updateJobDto: UpdateJobDto,
-  ) {
+  async update(@Param('id') id: string, @Body() updateJobDto: UpdateJobDto) {
     const updatedJob = await this.jobsService.update(id, updateJobDto);
     return { updatedJob, message: 'Job updated successfully' };
   }
@@ -69,17 +72,13 @@ export class JobsController {
       storage: diskStorage({
         destination: './uploads/job-logos',
         filename: (req, file, callback) => {
-          const uniqueName =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1e9);
           callback(null, uniqueName + extname(file.originalname));
         },
       }),
       fileFilter: (req, file, callback) => {
         if (!file.mimetype.startsWith('image/')) {
-          return callback(
-            new Error('Only image files are allowed'),
-            false,
-          );
+          return callback(new Error('Only image files are allowed'), false);
         }
         callback(null, true);
       },
@@ -107,8 +106,5 @@ export class JobsController {
       return { message: 'No logo uploaded for this job' };
     }
     return { logoUrl };
-  
-}
-
-  
+  }
 }
