@@ -65,4 +65,26 @@ export class JobsRepository extends FirestoreRepository<Job> {
 
     return { data, nextCursor };
   }
+
+  async findManyByIds(ids: string[]): Promise<Job[]> {
+    console.log('Im here');
+    if (!ids.length) return [];
+
+    const BATCH_SIZE = 10;
+    const results: Job[] = [];
+
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const batch = ids.slice(i, i + BATCH_SIZE);
+
+      const snapshot = await this.collection
+        .where('__name__', 'in', batch)
+        .get();
+
+      snapshot.docs.forEach((doc) => {
+        results.push(this.mapDoc(doc));
+      });
+    }
+
+    return results;
+  }
 }

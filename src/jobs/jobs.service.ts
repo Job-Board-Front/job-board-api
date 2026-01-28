@@ -37,6 +37,10 @@ export class JobsService {
     return this.jobsRepository.findById(id);
   }
 
+  async findManyByIds(ids: string[]) {
+    return this.jobsRepository.findManyByIds(ids);
+  }
+
   async remove(id: string) {
     return this.jobsRepository.delete(id);
   }
@@ -62,21 +66,21 @@ export class JobsService {
       throw new NotFoundException(`Job with ID ${id} not found`);
     }
     let keywords = existingJob.keywords;
-    
+
     if (updateJobDto.title || updateJobDto.company || updateJobDto.techStack) {
       const title = updateJobDto.title || existingJob.title;
       const company = updateJobDto.company || existingJob.company;
       const techStack = updateJobDto.techStack || existingJob.techStack;
-      
+
       keywords = this.generateKeywords([title, company, ...techStack]);
     }
-    
+
     const updatedData: Partial<Job> = {
       ...updateJobDto,
       keywords,
-      updatedAt: new Date(), 
+      updatedAt: new Date(),
     };
-    
+
     await this.jobsRepository.update(id, updatedData);
     const updatedJob = await this.findOne(id);
     return updatedJob;
@@ -104,8 +108,5 @@ export class JobsService {
     if (!job.logoUrl) return null;
 
     return job.logoUrl;
-}
-
-
-
+  }
 }
