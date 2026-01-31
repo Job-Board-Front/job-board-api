@@ -49,6 +49,10 @@ export class JobsService {
     return this.jobsRepository.findById(id);
   }
 
+  async findManyByIds(ids: string[]) {
+    return this.jobsRepository.findManyByIds(ids);
+  }
+
   async remove(id: string) {
     return this.jobsRepository.delete(id);
   }
@@ -112,5 +116,29 @@ export class JobsService {
       }
     }
     return updatedJob;
+  }
+
+  async updateLogo(jobId: string, logoUrl: string) {
+    const job = await this.findOne(jobId);
+
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+
+    await this.jobsRepository.update(jobId, {
+      logoUrl,
+      updatedAt: new Date(),
+    });
+
+    return logoUrl;
+  }
+  async getLogoUrl(jobId: string): Promise<string | null> {
+    const job = await this.findOne(jobId);
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
+    if (!job.logoUrl) return null;
+
+    return job.logoUrl;
   }
 }

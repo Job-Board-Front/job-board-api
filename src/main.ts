@@ -1,9 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Set URL Prefix
   app.setGlobalPrefix('api');
@@ -23,6 +25,9 @@ async function bootstrap() {
       transform: true, // Auto-transform payloads to DTO instances
     }),
   );
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/api/uploads',
+  });
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
