@@ -4,10 +4,14 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { JobQueryDto } from './dto/job-query.dto';
 import { Job } from './entities/job.entity';
 import { UpdateJobDto } from './dto/update-job.dto';
+import { FiltersService } from 'src/filters/filters.service';
 
 @Injectable()
 export class JobsService {
-  constructor(private readonly jobsRepository: JobsRepository) {}
+  constructor(
+    private readonly jobsRepository: JobsRepository,
+    private readonly filtersService: FiltersService,
+  ) {}
 
   async create(createJobDto: CreateJobDto): Promise<string> {
     // Generate simple keywords for search (Free tier alternative to Algolia)
@@ -26,7 +30,15 @@ export class JobsService {
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     };
 
-    return this.jobsRepository.create(jobData);
+    const jobId = await this.jobsRepository.create(jobData);
+
+    // 🚀 Sync the Filters Metadata asynchronously
+    // We don't await this because we don't want to slow down the HTTP response
+    this.filtersService
+      .updateFilters(createJobDto.location, createJobDto.techStack)
+      .catch((err) => console.error('Failed to update filters metadata', err));
+
+    return jobId;
   }
 
   async findAll(query: JobQueryDto) {
@@ -52,7 +64,7 @@ export class JobsService {
     inputs.forEach((input) => {
       if (!input) return;
       // Split by space, comma, or slash
-      const words = input.toLowerCase().split(/[\s,\/]+/);
+      const words = input.toLowerCase().split(/[\s,/]+/);
       words.forEach((w) => {
         if (w.length > 1) set.add(w); // Ignore single chars
       });
@@ -83,6 +95,26 @@ export class JobsService {
 
     await this.jobsRepository.update(id, updatedData);
     const updatedJob = await this.findOne(id);
+    // 🚀 Sync the Filters Metadata asynchronously
+    // We don't await this because we don't want to slow down the HTTP response
+    if (updateJobDto.techStack) {
+      if (!updateJobDto.location) {
+        this.filtersService
+          .updateFilters(existingJob.location, updateJobDto.techStack)
+          .catch((err) =>
+            console.error('Failed to update filters metadata', err),
+          );
+      } else if (
+        updateJobDto.location &&
+        updateJobDto.location !== existingJob.location
+      ) {
+        this.filtersService
+          .updateFilters(updateJobDto.location, updateJobDto.techStack)
+          .catch((err) =>
+            console.error('Failed to update filters metadata', err),
+          );
+      }
+    }
     return updatedJob;
   }
 
