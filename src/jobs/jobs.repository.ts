@@ -67,7 +67,6 @@ export class JobsRepository extends FirestoreRepository<Job> {
   }
 
   async findManyByIds(ids: string[]): Promise<Job[]> {
-    console.log('Im here');
     if (!ids.length) return [];
 
     const BATCH_SIZE = 10;
