@@ -4,9 +4,11 @@ import { FirebaseModule } from './firebase/firebase.module';
 import { AuthModule } from './auth/auth.module';
 import { JobsModule } from './jobs/jobs.module';
 import { BookmarksModule } from './bookmarks/bookmarks.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
     }),

@@ -22,6 +22,8 @@ export class JobsRepository extends FirestoreRepository<Job> {
       location,
       employmentType,
       experienceLevel,
+      title,
+      company,
     } = queryDto;
 
     // Explicitly type the query as Query<DocumentData>
@@ -43,6 +45,14 @@ export class JobsRepository extends FirestoreRepository<Job> {
       query = query.where('keywords', 'array-contains-any', keywords.slice(0, 10));
     }
   }
+      if (title) {
+      query = query.where('title', '==', title);
+    }
+
+    if (company) {
+      query = query.where('company', '==', company);
+    }
+
 
 
     // 2. Exact Filters

@@ -25,6 +25,15 @@ export class JobQueryDto {
   @Min(1)
   limit?: number = 10;
 
+  
+  @IsOptional()
+  @IsString()
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  company?: string;
+
   @IsOptional()
   @IsString()
   cursor?: string; // The ID of the last document from the previous page

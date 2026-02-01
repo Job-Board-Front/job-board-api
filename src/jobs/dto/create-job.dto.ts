@@ -4,8 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsBoolean,
-  isString,
+  IsIn,
 } from 'class-validator';
 import { EmploymentType, ExperienceLevel } from '../entities/job.entity';
 
@@ -46,4 +45,12 @@ export class CreateJobDto {
 
   @IsString()
   submissionLink?: string;
+
+  @IsOptional()
+  @IsIn(['seeded', 'manual', 'arbeitnow', 'remotive', 'findwork'])
+  source?: 'seeded' | 'manual' | 'arbeitnow' | 'remotive' | 'findwork';
+
+  @IsOptional()
+  @IsString()
+  externalId?: string; 
 }
