@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { FirebaseService } from '../firebase/firebase.service';
 import { EmploymentType, ExperienceLevel } from '../jobs/entities/job.entity';
 import { FieldValue } from 'firebase-admin/firestore';
-import { log } from 'console';
 
 @Injectable()
 export class FiltersService {
@@ -18,7 +17,6 @@ export class FiltersService {
   async getFilters() {
     const doc = await this.docRef.get();
     const data = doc.exists ? doc.data() : {};
-    log(this.firebase.firestore.collection('metadata').doc('job_filters'));
     return {
       // 1. Static Enums (Always in sync with Backend code)
       employmentTypes: Object.values(EmploymentType),

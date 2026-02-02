@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import * as currentUserDecorator from 'src/common/decorators/current-user.decorator';
 import { FirebaseAuthGuard } from 'src/common/guards/auth.guard';
@@ -33,8 +34,11 @@ export class BookmarksController {
 
   @Get()
   async findAll(
+    @Req() req: Request,
     @currentUserDecorator.CurrentUser() user: currentUserDecorator.UserPayload,
   ) {
+    console.log(req.headers);
+
     return this.bookmarksService.getUserBookmarks(user.uid);
   }
 }

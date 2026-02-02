@@ -30,6 +30,12 @@ export class FirebaseAuthGuard implements CanActivate {
         email: decodedToken.email,
         roles: decodedToken.roles || ['user'],
       };
+      console.log({
+        uid: decodedToken.uid,
+        email: decodedToken.email,
+        roles: decodedToken.roles || ['user'],
+      });
+
       return true;
     } catch (error) {
       throw new UnauthorizedException('Invalid or expired token');
