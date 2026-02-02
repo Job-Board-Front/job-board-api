@@ -12,6 +12,8 @@ if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
+  
+  admin.firestore().settings({ ignoreUndefinedProperties: true });
 }
 
 const db = admin.firestore();

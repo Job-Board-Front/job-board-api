@@ -16,6 +16,9 @@ export class FirebaseService {
             ?.replace(/\\n/g, '\n'),
         }),
       });
+      
+      // Enable ignoreUndefinedProperties to handle undefined values in Firestore
+      admin.firestore().settings({ ignoreUndefinedProperties: true });
     }
   }
 
