@@ -29,4 +29,5 @@ export class Job {
   updatedAt?: Date; // Optional on creation
   logoUrl?: string;
   submissionLink?: string;
+  createdBy: string;
 }

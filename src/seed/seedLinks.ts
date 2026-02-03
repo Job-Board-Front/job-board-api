@@ -24,18 +24,18 @@ const submissionLinks = [
   'https://www.linkedin.com/jobs/view/apply/123456789',
   'https://www.linkedin.com/jobs/view/987654321/apply',
   'https://www.linkedin.com/jobs/collections/recommended/?currentJobId=456789123',
-  
+
   // Sites carrières d'entreprises
   'https://www.keejob.com/',
   'https://www.optioncarriere.tn/',
   'https://apply.innovate.io/developer-position',
   'https://recruitment.digitalfirm.com/candidate/apply',
-  
+
   // Plateformes de recrutement
   'https://www.welcometothejungle.com/companies',
   'https://www.glassdoor.com/Job/application',
   'https://www.indeed.com/applystart',
-  
+
   // Sites avec référence
   'https://www.company.com/careers?ref=jobboard123',
   'https://jobs.example.com/apply?source=tech_jobs_portal',
@@ -46,7 +46,6 @@ const getRandomSubmissionLink = () => {
   const randomIndex = Math.floor(Math.random() * submissionLinks.length);
   return submissionLinks[randomIndex];
 };
-
 
 async function addSubmissionLinksToJobs() {
   console.log('🚀 Adding submission links to existing jobs...\n');
@@ -63,15 +62,14 @@ async function addSubmissionLinksToJobs() {
     snapshot.forEach((doc) => {
       const docRef = db.collection('jobs').doc(doc.id);
       const jobData = doc.data();
-      
-       const submissionLink = getRandomSubmissionLink();
-      
-      
-      batch.update(docRef, { 
+
+      const submissionLink = getRandomSubmissionLink();
+
+      batch.update(docRef, {
         submissionLink,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp() // Optionnel
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(), // Optionnel
       });
-      
+
       updatedCount++;
       operationCount++;
 
@@ -87,7 +85,9 @@ async function addSubmissionLinksToJobs() {
       await batch.commit();
     }
 
-    console.log(`\n🎉 Successfully added submission links to ${updatedCount} jobs!`);
+    console.log(
+      `\n🎉 Successfully added submission links to ${updatedCount} jobs!`,
+    );
 
     process.exit(0);
   } catch (error) {
@@ -95,7 +95,6 @@ async function addSubmissionLinksToJobs() {
     process.exit(1);
   }
 }
-
 
 addSubmissionLinksToJobs().catch((err) => {
   console.error('Update failed', err);

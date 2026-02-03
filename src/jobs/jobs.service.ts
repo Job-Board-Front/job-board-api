@@ -1,9 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { JobsRepository } from './jobs.repository';
 import { CreateJobDto } from './dto/create-job.dto';
 import { JobQueryDto } from './dto/job-query.dto';
 import { Job } from './entities/job.entity';
 import { UpdateJobDto } from './dto/update-job.dto';
+import { Role } from 'src/auth/roles/roles.enum';
+import { UserPayload } from 'src/auth/interfaces/user-payload.interface';
 import { FiltersService } from 'src/filters/filters.service';
 
 @Injectable()
@@ -13,7 +19,7 @@ export class JobsService {
     private readonly filtersService: FiltersService,
   ) {}
 
-  async create(createJobDto: CreateJobDto): Promise<string> {
+  async create(createJobDto: CreateJobDto, user: UserPayload): Promise<string> {
     // 🔍 Improved Keyword Generation for Partial Matching
     const keywords = this.generateKeywords([
       createJobDto.title,
@@ -23,6 +29,7 @@ export class JobsService {
 
     const jobData: Job = {
       ...createJobDto,
+      createdBy: user.uid,
       keywords, // Now contains ["n", "ne", "nes", "nest", "nestj", "nestjs"...]
       isActive: true,
       source: 'manual',
@@ -52,12 +59,34 @@ export class JobsService {
     return this.jobsRepository.findManyByIds(ids);
   }
 
-  async remove(id: string) {
-    return this.jobsRepository.delete(id);
+  async remove(id: string, user: UserPayload) {
+    const job = await this.jobsRepository.findById(id);
+
+    const isAdmin = user.roles.includes(Role.ADMIN);
+    const isOwner = job.createdBy === user.uid;
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException('You can only delete your own jobs');
+    }
+
+    await this.jobsRepository.delete(id);
   }
 
-  async update(id: string, updateJobDto: UpdateJobDto): Promise<Job> {
+  async update(
+    id: string,
+    updateJobDto: UpdateJobDto,
+    user: UserPayload,
+  ): Promise<Job> {
     const existingJob = await this.findOne(id);
+
+    // Allow if Admin OR if Owner
+    const isAdmin = user.roles.includes(Role.ADMIN);
+    const isOwner = existingJob.createdBy === user.uid;
+
+    if (!isAdmin && !isOwner) {
+      throw new ForbiddenException('You can only update your own jobs');
+    }
+
     if (!existingJob) {
       throw new NotFoundException(`Job with ID ${id} not found`);
     }
