@@ -4,8 +4,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsBoolean,
-  isString,
 } from 'class-validator';
 import { EmploymentType, ExperienceLevel } from '../entities/job.entity';
 

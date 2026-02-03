@@ -12,6 +12,8 @@ if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
+  
+  admin.firestore().settings({ ignoreUndefinedProperties: true });
 }
 
 const db = admin.firestore();
@@ -47,18 +49,26 @@ async function seed() {
   let batch = db.batch();
   let count = 0;
 
+  // Track unique values for the metadata document
+  const uniqueLocations = new Set<string>();
+  const uniqueTechStacks = new Set<string>();
+
   for (let i = 1; i <= 50; i++) {
     const docRef = db.collection('jobs').doc();
 
     const techStack = techs[Math.floor(Math.random() * techs.length)];
+    const location = locations[Math.floor(Math.random() * locations.length)];
     const title = `${techStack[0]} Developer`;
     const company = `Tech Company ${i}`;
+
+    uniqueLocations.add(location);
+    techStack.forEach((t) => uniqueTechStacks.add(t));
 
     const job = {
       title,
       description: `We are looking for a passionate ${title} with experience in ${techStack.join(', ')}. Join us at ${company}.`,
       company,
-      location: locations[Math.floor(Math.random() * locations.length)],
+      location,
       employmentType: types[Math.floor(Math.random() * types.length)],
       experienceLevel: levels[Math.floor(Math.random() * levels.length)],
       techStack,
@@ -84,6 +94,17 @@ async function seed() {
       batch = db.batch();
       count = 0;
     }
+
+    // 🚀 Write the Metadata Document
+    const metadataRef = db.collection('metadata').doc('job_filters');
+    batch.set(
+      metadataRef,
+      {
+        locations: Array.from(uniqueLocations),
+        techStacks: Array.from(uniqueTechStacks),
+      },
+      { merge: true },
+    );
   }
 
   if (count > 0) {
