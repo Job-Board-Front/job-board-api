@@ -44,4 +44,9 @@ export class CreateJobDto {
 
   @IsString()
   submissionLink?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  keywords?: string[];
 }

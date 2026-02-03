@@ -19,82 +19,61 @@ const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true });
 
 // ---------------------------------------------------------
-// 🧠 Logic: Sanitized Keyword Generation
+// 🛠 Helpers
 // ---------------------------------------------------------
-const generateKeywords = (inputs: any[]): string[] => {
-  const set = new Set<string>();
 
+// 🟢 CLEAN: Keeps whole words only (For Frontend)
+const generateDisplayKeywords = (inputs: any[]): string[] => {
+  const set = new Set<string>();
+  inputs.forEach((input) => {
+    if (!input || typeof input !== 'string') return;
+    const cleanInput = input.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const words = cleanInput.split(/[\s,/]+/);
+    words.forEach((w) => {
+      // Remove symbols/emojis, keep alphanumeric
+      const clean = w.replace(/[^\w\s-]/gi, '');
+      if (clean.length > 1) set.add(clean);
+    });
+  });
+  return Array.from(set);
+};
+
+// 🔴 MESSY: Generates prefixes (For Backend Search)
+const generateSearchIndex = (inputs: any[]): string[] => {
+  const set = new Set<string>();
   inputs.forEach((input) => {
     if (!input || typeof input !== 'string') return;
 
-    // 🧹 SANITIZATION STEP (The Fix)
-    // 1. Normalize: "é" -> "e" + accent
-    // 2. Remove Accents
-    // 3. Remove Emojis & Symbols: Keep only a-z, 0-9, and whitespace
+    // Normalize & Sanitize
     const cleanInput = input
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove accents
-      .replace(/[^\w\s]/gi, '') // 🚨 REMOVES EMOJIS (🇩🇪), symbols, punctuation
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\w\s]/gi, '')
       .toLowerCase();
 
-    // Split words
     const words = cleanInput.split(/[\s]+/);
 
     words.forEach((word) => {
-      // SAFETY: Skip empty or super long words
       if (word.length === 0 || word.length > 30) return;
-
-      // Generate prefixes
-      let currentPrefix = '';
+      let prefix = '';
       for (let i = 0; i < word.length; i++) {
-        currentPrefix += word[i];
-        set.add(currentPrefix);
+        prefix += word[i];
+        set.add(prefix);
       }
     });
   });
 
-  // SAFETY: Truncate massive arrays
   const result = Array.from(set);
-  if (result.length > 4000) {
-    return result.slice(0, 4000);
-  }
-  return result;
+  return result.length > 4000 ? result.slice(0, 4000) : result;
 };
 
 // ---------------------------------------------------------
-// 🛠 Helper: Process Single Document (Fallback)
+// 🚀 Migration Logic
 // ---------------------------------------------------------
-async function processDoc(doc: admin.firestore.QueryDocumentSnapshot) {
-  const data = doc.data();
+async function migrate() {
+  console.log('🔄 Separating Keywords (Frontend) & Search Index (Backend)...');
 
-  const title = data.title ? String(data.title) : '';
-  const company = data.company ? String(data.company) : '';
-
-  const techStackRaw = Array.isArray(data.techStack) ? data.techStack : [];
-  const techStack = techStackRaw.filter(
-    (item: any) => typeof item === 'string',
-  );
-
-  const newKeywords = generateKeywords([title, company, ...techStack]);
-
-  try {
-    await doc.ref.update({
-      keywords: newKeywords,
-      updatedAt: admin.firestore.Timestamp.now(),
-    });
-  } catch (error) {
-    console.error(`❌ FAILED PERMANENTLY on Document ID: ${doc.id}`);
-    console.error(`   Data Title: ${title}`);
-    console.error(`   Error:`, error);
-  }
-}
-
-// ---------------------------------------------------------
-// 🚀 Main Migration Function
-// ---------------------------------------------------------
-async function updateJobKeywords() {
-  console.log('🔄 Starting Keyword Migration (Sanitized Mode)...');
-
+  // Use a collection group or specific collection
   const jobsRef = db.collection('jobs');
   const snapshot = await jobsRef.get();
 
@@ -103,60 +82,57 @@ async function updateJobKeywords() {
     process.exit(0);
   }
 
-  console.log(`📊 Found ${snapshot.size} jobs.`);
+  console.log(`📊 Found ${snapshot.size} jobs to process.`);
 
-  const BATCH_SIZE = 300;
   let batch = db.batch();
-  let batchDocs: admin.firestore.QueryDocumentSnapshot[] = [];
-  let totalUpdated = 0;
+  let count = 0;
+  let batchCount = 0;
 
-  for (let i = 0; i < snapshot.docs.length; i++) {
-    const doc = snapshot.docs[i];
+  for (const doc of snapshot.docs) {
     const data = doc.data();
 
-    // Prepare Data
     const title = data.title ? String(data.title) : '';
     const company = data.company ? String(data.company) : '';
-    const techStackRaw = Array.isArray(data.techStack) ? data.techStack : [];
-    const techStack = techStackRaw.filter(
-      (item: any) => typeof item === 'string',
-    );
+    const techStack = Array.isArray(data.techStack) ? data.techStack : [];
 
-    const newKeywords = generateKeywords([title, company, ...techStack]);
+    // Gather all text sources
+    const rawInputs = [title, company, ...techStack];
 
-    // Add to Batch
+    // Generate fields
+    const cleanKeywords = generateDisplayKeywords(rawInputs);
+    const searchIndex = generateSearchIndex(rawInputs);
+
     batch.update(doc.ref, {
-      keywords: newKeywords,
+      keywords: cleanKeywords, // For Frontend
+      searchIndex: searchIndex, // For Backend Search
       updatedAt: admin.firestore.Timestamp.now(),
     });
-    batchDocs.push(doc);
 
-    // Commit if batch is full OR if it's the last item
-    if (batchDocs.length >= BATCH_SIZE || i === snapshot.docs.length - 1) {
-      try {
-        await batch.commit();
-        totalUpdated += batchDocs.length;
-        console.log(`✅ Committed batch of ${batchDocs.length} jobs.`);
-      } catch (err) {
-        console.error(
-          `⚠️ Batch failed! Retrying ${batchDocs.length} docs individually...`,
-        );
-        // Retry individually to save the valid ones
-        for (const badDoc of batchDocs) {
-          await processDoc(badDoc);
-        }
-      }
-      // Reset
-      batch = db.batch();
-      batchDocs = [];
+    count++;
+    batchCount++;
+
+    // 🚨 THE FIX: Commit and RE-CREATE the batch
+    if (batchCount >= 300) {
+      await batch.commit();
+      console.log(`✅ Saved batch of ${batchCount} docs (Total: ${count})`);
+
+      // Reset for next loop
+      batch = db.batch(); // <--- Create a NEW batch instance
+      batchCount = 0;
     }
   }
 
-  console.log(`🏁 Migration complete. Processed ${totalUpdated} jobs.`);
+  // Commit any remaining docs
+  if (batchCount > 0) {
+    await batch.commit();
+    console.log(`✅ Saved final batch of ${batchCount} docs.`);
+  }
+
+  console.log('🏁 Migration Complete!');
   process.exit(0);
 }
 
-updateJobKeywords().catch((err) => {
-  console.error('❌ Fatal Script Error:', err);
+migrate().catch((err) => {
+  console.error('❌ Migration Error:', err);
   process.exit(1);
 });

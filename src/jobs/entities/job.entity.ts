@@ -1,3 +1,5 @@
+import { Exclude } from "class-transformer";
+
 export enum EmploymentType {
   FULL_TIME = 'full-time',
   PART_TIME = 'part-time',
@@ -30,4 +32,6 @@ export class Job {
   logoUrl?: string;
   submissionLink?: string;
   createdBy: string;
+  @Exclude()
+  searchIndex: string[];
 }

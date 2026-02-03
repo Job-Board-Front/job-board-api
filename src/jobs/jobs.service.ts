@@ -20,17 +20,23 @@ export class JobsService {
   ) {}
 
   async create(createJobDto: CreateJobDto, user: UserPayload): Promise<string> {
-    // 🔍 Improved Keyword Generation for Partial Matching
-    const keywords = this.generateKeywords([
+    const rawInputs = [
       createJobDto.title,
       createJobDto.company,
       ...createJobDto.techStack,
-    ]);
+    ];
+
+    // 1. Generate Clean Keywords (For Frontend)
+    const keywords = this.generateDisplayKeywords(rawInputs);
+
+    // 2. Generate Search Index (For Backend Querying)
+    const searchIndex = this.generateSearchIndex(rawInputs);
 
     const jobData: Job = {
       ...createJobDto,
+      keywords, // <--- Clean words
+      searchIndex, // <--- Prefixes
       createdBy: user.uid,
-      keywords, // Now contains ["n", "ne", "nes", "nest", "nestj", "nestjs"...]
       isActive: true,
       source: 'manual',
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -91,16 +97,22 @@ export class JobsService {
       throw new NotFoundException(`Job with ID ${id} not found`);
     }
 
-    let keywords = existingJob.keywords;
+    const keywords = existingJob.keywords;
 
     // Regenerate keywords if critical fields change
     if (updateJobDto.title || updateJobDto.company || updateJobDto.techStack) {
-      const title = updateJobDto.title || existingJob.title;
-      const company = updateJobDto.company || existingJob.company;
-      const techStack = updateJobDto.techStack || existingJob.techStack;
+      const rawInputs = [
+        updateJobDto.title || existingJob.title,
+        updateJobDto.company || existingJob.company,
+        ...(updateJobDto.techStack || existingJob.techStack),
+      ];
 
-      // 🔍 Regenerates prefixes based on new data
-      keywords = this.generateKeywords([title, company, ...techStack]);
+      // Regenerate both
+      updateJobDto.keywords = this.generateDisplayKeywords(rawInputs);
+      const searchIndex = this.generateSearchIndex(rawInputs); // Save this to a var
+
+      // Pass searchIndex to repo update...
+      await this.jobsRepository.update(id, { ...updateJobDto, searchIndex });
     }
 
     const updatedData: Partial<Job> = {
@@ -151,32 +163,40 @@ export class JobsService {
     return job.logoUrl || null;
   }
 
-  // ---------------------------------------------------------
-  // 🧠 THE CORE LOGIC CHANGE
-  // ---------------------------------------------------------
-  private generateKeywords(inputs: string[]): string[] {
+  // 🟢 CLEAN: Keeps whole words only (e.g., "React", "Developer")
+  private generateDisplayKeywords(inputs: string[]): string[] {
     const set = new Set<string>();
-
     inputs.forEach((input) => {
       if (!input) return;
+      // Split by space/comma, remove symbols, keep case or lowercase based on preference
+      const words = input.split(/[\s,/]+/);
+      words.forEach((w) => {
+        const clean = w.replace(/[^\w\s]/gi, ''); // Remove emojis
+        if (clean.length > 1) set.add(clean);
+      });
+    });
+    return Array.from(set);
+  }
 
-      // 1. Clean string and split into words
-      // "NestJS Developer" -> ["nestjs", "developer"]
-      const words = input.toLowerCase().split(/[\s,/]+/);
+  // 🔴 MESSY: Generates prefixes (e.g., "r", "re", "rea")
+  private generateSearchIndex(inputs: string[]): string[] {
+    const set = new Set<string>();
+    inputs.forEach((input) => {
+      if (!input) return;
+      // Sanitize to lowercase for search
+      const cleanInput = input.toLowerCase().replace(/[^\w\s]/gi, '');
+      const words = cleanInput.split(/[\s]+/);
 
       words.forEach((word) => {
-        // 2. Generate all prefixes for each word (Edge-N-Grams)
-        // Word: "react"
-        // Adds: "r", "re", "rea", "reac", "react"
-        let currentPrefix = '';
+        if (word.length > 30) return;
+        // Generate prefixes
+        let prefix = '';
         for (let i = 0; i < word.length; i++) {
-          currentPrefix += word[i];
-          set.add(currentPrefix);
+          prefix += word[i];
+          set.add(prefix);
         }
       });
     });
-
-    // Result for "React": ["r", "re", "rea", "reac", "react"]
-    return Array.from(set);
+    return Array.from(set).slice(0, 4000);
   }
 }

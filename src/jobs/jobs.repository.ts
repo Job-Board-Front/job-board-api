@@ -33,7 +33,11 @@ export class JobsRepository extends FirestoreRepository<Job> {
 
     // 1. Keyword Search
     if (search) {
-      query = query.where('keywords', 'array-contains', search.toLowerCase());
+      query = query.where(
+        'searchIndex',
+        'array-contains',
+        search.toLowerCase(),
+      );
     }
 
     // 2. Exact Filters
